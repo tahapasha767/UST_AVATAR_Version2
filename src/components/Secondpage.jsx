@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
-import { Mic, Loader2 } from 'lucide-react';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import React, { useState, useRef } from 'react';
+import { Mic, Loader2, Square } from 'lucide-react';
 
-const genAI = new GoogleGenerativeAI("AIzaSyAUt653G8LVW7I1h_c5D5m3SuFdgtu6tUY");
-
-const VoiceInputComponent = ({setAlbys_text}) => {
+const VoiceInputComponent = ({ setAlbys_text, isSpeaking }) => {
   const [text, setText] = useState('');
   const [listening, setListening] = useState(false);
+  const recognitionRef = useRef(null); // Reference to stop recognition
 
   const handleVoiceInput = () => {
     const SpeechRecognition =
@@ -18,7 +16,8 @@ const VoiceInputComponent = ({setAlbys_text}) => {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'en-IN'; // Optional: Indian accent
+    recognitionRef.current = recognition;
+    recognition.lang = 'en-IN';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
@@ -26,19 +25,38 @@ const VoiceInputComponent = ({setAlbys_text}) => {
 
     recognition.onresult = async (event) => {
       const spokenText = event.results[0][0].transcript;
-      setText(spokenText);
+      if(spokenText==="hi I'll be"|| spokenText==="hi I will be"||spokenText==="ilb") {
+         setText("Hi Alby");
+
+      }else{
+      setText(spokenText);}
       console.log("🎙️ You said:", spokenText);
 
       try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(spokenText);
-        const response = await result.response;
-        const reply = response.text();
-        setAlbys_text(reply);
+        const response = await fetch("http://localhost:3000/detectIntent", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query: spokenText }),
+        });
 
-        console.log("🧠 Gemini:", reply);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const reply = data[0]["text"]["text"][0] || "AI could not generate a response.";
+        setAlbys_text(reply);
+        console.log("🧠 Local API:", reply);
       } catch (error) {
-        console.error("❌ Gemini API error:", error);
+        const fallback = [
+          "Oops! Something went wrong. Try again?",
+          "Hmm, I didn't catch that. Please repeat.",
+          "Sorry, something broke. Try again?",
+        ];
+        setAlbys_text(fallback[Math.floor(Math.random() * fallback.length)]);
+        console.error("❌ Local API error:", error);
       }
     };
 
@@ -49,6 +67,14 @@ const VoiceInputComponent = ({setAlbys_text}) => {
     recognition.onend = () => setListening(false);
 
     recognition.start();
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current && listening) {
+      recognitionRef.current.stop();
+      setListening(false);
+      console.log("🛑 Speech recognition manually stopped");
+    }
   };
 
   return (
@@ -68,27 +94,51 @@ const VoiceInputComponent = ({setAlbys_text}) => {
         Hi, I am <span style={{ color: '#2563eb' }}>Alby</span> 🧠
       </h2>
 
-      <button
-        onClick={handleVoiceInput}
-        style={{
-          backgroundColor: listening ? '#dc2626' : '#2563eb',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '9999px',
-          padding: '1rem',
-          cursor: 'pointer',
-          width: '60px',
-          height: '60px',
-          boxShadow: '0 5px 15px rgba(0, 0, 0, 0.2)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'background 0.3s ease',
-        }}
-        title="Click to speak"
-      >
-        {listening ? <Loader2 className="animate-spin" /> : <Mic size={24} />}
-      </button>
+      <div style={{ display: 'flex', gap: '1rem' }}>
+        <button
+          onClick={handleVoiceInput}
+          disabled={isSpeaking || listening}
+          style={{
+            backgroundColor: '#2563eb',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '9999px',
+            padding: '1rem',
+            width: '60px',
+            height: '60px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 5px 15px rgba(0, 0, 0, 0.2)',
+          }}
+          title="Start speaking"
+        >
+          {listening ? <Loader2 className="animate-spin" /> : <Mic size={24} />}
+        </button>
+
+        <button
+          onClick={stopListening}
+          disabled={!listening}
+          style={{
+            backgroundColor: '#dc2626',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '9999px',
+            padding: '1rem',
+            width: '60px',
+            height: '60px',
+            cursor: listening ? 'pointer' : 'not-allowed',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 5px 15px rgba(0, 0, 0, 0.2)',
+          }}
+          title="Stop listening"
+        >
+          <Square size={24} />
+        </button>
+      </div>
 
       <p style={{ marginTop: '2rem', fontSize: '1.1rem', maxWidth: '400px', textAlign: 'center' }}>
         <strong>Transcript:</strong><br /> {text || 'Click the mic and speak...'}
