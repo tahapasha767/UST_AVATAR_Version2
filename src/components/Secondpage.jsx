@@ -33,12 +33,14 @@ const VoiceInputComponent = ({ setAlbys_text, isSpeaking }) => {
       console.log("🎙️ You said:", spokenText);
 
       try {
+        console.log(spokenText)
         const response = await fetch("http://localhost:3000/detectIntent", {
+
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ query: spokenText }),
+          body: JSON.stringify({  userInput: spokenText }),
         });
 
         if (!response.ok) {
@@ -46,6 +48,7 @@ const VoiceInputComponent = ({ setAlbys_text, isSpeaking }) => {
         }
 
         const data = await response.json();
+        console.log("🧠 AI response:", data);
         const reply = data[0]["text"]["text"][0] || "AI could not generate a response.";
         setAlbys_text(reply);
         console.log("🧠 Local API:", reply);
