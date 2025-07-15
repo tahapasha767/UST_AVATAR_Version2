@@ -6,7 +6,7 @@ export const Experience = ({ isSpeaking }) => {
   return (
     <>
       <OrbitControls />
-      <Avatar position={[0,-3,5]} scale={2}  isSpeaking={isSpeaking} />
+      <Avatar position={[0,-4.6,5]} scale={3}  isSpeaking={isSpeaking} />
       <ambientLight intensity={2} />
       
     </>

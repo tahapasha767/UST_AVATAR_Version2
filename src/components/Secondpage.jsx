@@ -1,10 +1,81 @@
 import React, { useState, useRef } from 'react';
-import { Mic, Loader2, Square } from 'lucide-react';
+import { Mic, Loader2, Square, Combine } from 'lucide-react';
 
 const VoiceInputComponent = ({ setAlbys_text, isSpeaking }) => {
   const [text, setText] = useState('');
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef(null); // Reference to stop recognition
+const displaySentencesWithDelayAdvanced = (reply) => {
+  // STEP 1: Split using lookbehind for ., \n, or \t
+  const rawSentences = reply
+    .split(/(?<=[.\n])/g)
+    .map(s => s.trim())
+    .filter(Boolean); // remove blanks
+
+  // STEP 2: Create array of { text, delay }
+  console.log("📜 Raw Sentences:", rawSentences);;
+  const sentenceQueue = rawSentences.map((sentence) => {
+    let delay = 1500; // default for '.'
+
+    if (sentence.toLowerCase().endsWith('applause!')) delay = 4000;
+    else if (sentence.endsWith('\t')) delay = 2000;
+
+    return { text: sentence, delay };
+  });
+
+  console.log("📜 Parsed Sentences:", sentenceQueue);
+
+  // STEP 3: Display sentences with delays
+  let index = 0;
+
+  const showNext = () => {
+    if (index >= sentenceQueue.length) return;
+
+    const { text, delay } = sentenceQueue[index];
+    setAlbys_text(text);
+    index++;
+
+    setTimeout(showNext, delay);
+  };
+
+  showNext();
+};
+const splitAndDisplayWithTimeouts = (text) => {
+  const sentences = text
+    .split(/(?<=[.])|\n/)         // Split by "." or "\n"
+    .map(s => s.trim())
+    .filter(Boolean);             // Remove blanks
+
+  console.log("📄 Sentences:", sentences);
+
+  let time = 0;
+
+  for (let sentence of sentences) {
+    let delay;
+
+if (sentence.endsWith('.')||sentence.endsWith(',')) {
+  delay = 1500;
+} else {
+  delay = 12000;
+  console.log("⏱️ Long pause for:", sentence);
+}
+   
+
+    setTimeout(() => {
+      let finalSentence = sentence
+  .replace(/\\n/g, '')  // Remove literal "\n"
+  .replace(/\\t/g, ''); // Remove literal "\t"
+
+       setAlbys_text(finalSentence);
+      console.log("⏱️", sentence);
+    }, time);
+
+    time += delay;
+  }
+};
+
+
+
 
   const handleVoiceInput = () => {
     const SpeechRecognition =
@@ -50,7 +121,14 @@ const VoiceInputComponent = ({ setAlbys_text, isSpeaking }) => {
         const data = await response.json();
         console.log("🧠 AI response:", data);
         const reply = data[0]["text"]["text"][0] || "AI could not generate a response.";
-        setAlbys_text(reply);
+       
+
+console.log("🧠 Local API Reply:", reply);
+//console.log("🧩 Split Sentences:", replySentences);
+       // setAlbys_text(reply);
+      // displaySentencesWithDelayAdvanced(reply)
+      // splitTextByDotsAndNewlines(reply);
+      splitAndDisplayWithTimeouts(reply);
         console.log("🧠 Local API:", reply);
       } catch (error) {
         const fallback = [
@@ -94,7 +172,7 @@ const VoiceInputComponent = ({ setAlbys_text, isSpeaking }) => {
       }}
     >
       <h2 style={{ fontSize: '3rem', marginBottom: '10rem', color: '#333' }}>
-        Hi, I am <span style={{ color: '#2563eb' }}>Alby</span> 🧠
+        Hi, I am <span style={{ color: '#2563eb' }}>A<span className='text-2xl'></span>I</span> 🧠
       </h2>
 
       <div style={{ display: 'flex', gap: '1rem' }}>

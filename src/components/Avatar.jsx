@@ -5,6 +5,8 @@ import { SkeletonUtils } from 'three-stdlib';
 //import { is } from '@react-three/fiber/dist/declarations/src/core/utils';
 
 export function Avatar({ isSpeaking, ...props }) {
+  
+
   const { scene } = useGLTF('/models/686fc4da551f5301dc374d2b.glb');
   const cloned = useMemo(() => SkeletonUtils.clone(scene), [scene]);
   const { nodes, materials } = useGraph(cloned);
@@ -16,24 +18,45 @@ console.log(isSpeaking);
   
 
   // 🎯 Real-time jaw movement synced with speech
+  useEffect(() => {
+  const head = headRef.current;
+  if (head?.morphTargetDictionary) {
+    console.log("🤖 Available Morph Targets:", Object.keys(head.morphTargetDictionary));
+  }
+}, []);
+useEffect(() => {
+  const head = headRef.current;
+  if (head?.morphTargetDictionary) {
+    console.log("Morph Targets:", Object.keys(head.morphTargetDictionary));
+  }
+}, []);
+
+
+
+
   useFrame(() => {
-    if (!isSpeaking) return;
+  const head = headRef.current;
+  if (!head) return;
 
-    const head = headRef.current;
-    if (!head) return;
+  const dict = head.morphTargetDictionary;
+  const infl = head.morphTargetInfluences;
+  if (!dict || !infl) return;
 
-    const dict = head.morphTargetDictionary;
-    const infl = head.morphTargetInfluences;
-    if (!dict || !infl) return;
+  const index = dict['viseme_aa'];
+  if (index === undefined) return;
 
-    const index = dict['viseme_aa'];
-    if (index === undefined) return;
-
-    const time = Date.now() * 0.015;
+  if (isSpeaking) {
+    // 👄 Animate jaw movement when speaking
+    const time = Date.now() * 0.014;
     const noise = Math.random() * 0.1;
     infl[index] = 0.6 + 0.3 * Math.sin(time) + noise;
     infl[index] = Math.min(Math.max(infl[index], 0), 1); // Clamp between 0 and 1
-  });
+  } else {
+    // 🛑 Close the mouth when not speaking
+    infl[index] = 0;
+  }
+});
+
 
   return (
     
